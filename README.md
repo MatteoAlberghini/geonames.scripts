@@ -19,6 +19,15 @@ cd /scripts/
 python geonames_to_json NL.txt test.json
 ```
 
+## Utilities
+
+To prettify a heavy JSON on windows, you can run:
+
+```bash
+type starting.json | python -mjson.tool > ending.json
+```
+
+
 ## Folders Description
 
 The data folder contains backups of all the data used by me. They're just examples. To be sure to have the latest data you should be taking them from the [Geonames website](https://download.geonames.org/export/dump/)
