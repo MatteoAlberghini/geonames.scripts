@@ -17,7 +17,7 @@ if __name__ == "__main__":
   countryFlags = [
     'ALL', 'all', 'All', # All countries
     'NL', 'nl', # Netherlands
-    'GE', 'ge', # Germany
+    'DE', 'de',  # Germany
     'GB', 'gb', 'uk', 'UK', # United Kindgom 
   ]
 
@@ -69,6 +69,12 @@ if __name__ == "__main__":
     case ('NL' | 'nl'):
       inputFile = r'..\data\netherlands\NL.txt'
       outputFile = r'..\data\netherlands\NL.json'
+    case ('DE' | 'de'):
+      inputFile = r'..\data\germany\DE.txt'
+      outputFile = r'..\data\germany\DE.json'
+    case ('GB' | 'gb' | 'uk' | 'UK'):
+      inputFile = r'..\data\uk\GB.txt'
+      outputFile = r'..\data\uk\GB.json'
   
   # If input or output is None give error and exit
   if inputFile is None or outputFile is None:
@@ -77,12 +83,18 @@ if __name__ == "__main__":
   
   # Convert txt to csv. Remember sep parameter and header none. Pass names to have them named something else than 0...15.
   print("Starting reading and writing process...")
+  # Clear file
+  open(outputFile, 'w').close()
   # Convert each chunk instead of the full file so we don't get memory problems for C
-  for index, chunk in enumerate(pd.read_csv(inputFile, sep="\t", header=None, names=jsonKeys, encoding = "ISO-8859-1", chunksize=20000, low_memory=False)):
-    print(f"Converting chunk number {index}")
-    with open(outputFile, 'a', encoding='utf-8') as file:
-      print(f"Writing chunk number {index} to JSON")
-      chunk.to_json(file, force_ascii=False, orient="records")
+  try:
+    for index, chunk in enumerate(pd.read_csv(inputFile, sep="\t", header=None, names=jsonKeys, encoding = "ISO-8859-1", chunksize=20000, low_memory=False)):
+      print(f"Converting chunk number {index}")
+      with open(outputFile, 'a', encoding='utf-8') as file:
+        print(f"Writing chunk number {index} to JSON")
+        chunk.to_json(file, force_ascii=False, orient="records")
+  except FileNotFoundError:
+    print(colored(f"ERROR: File not found for country {flag}, check data subfolders (ECODE: 0004)", "red"))
+    sys.exit(1)
 
   # Exit program correctly
   print(colored("Operation completed, created JSON file.", "green"))
