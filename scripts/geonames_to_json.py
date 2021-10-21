@@ -82,16 +82,14 @@ if __name__ == "__main__":
     sys.exit(1)
   
   # Convert txt to csv. Remember sep parameter and header none. Pass names to have them named something else than 0...15.
-  print("Starting reading and writing process...")
-  # Clear file
-  open(outputFile, 'w').close()
-  # Convert each chunk instead of the full file so we don't get memory problems for C
+  print("Reading TXT and making CSV...")
+  data = pd.read_csv(inputFile, sep="\t", header=None, names=jsonKeys, encoding = "ISO-8859-1", low_memory=False)
+
+  # Convert CSV to JSON
+  print("Converting CSV to JSON...")
   try:
-    for index, chunk in enumerate(pd.read_csv(inputFile, sep="\t", header=None, names=jsonKeys, encoding = "ISO-8859-1", chunksize=20000, low_memory=False)):
-      print(f"Converting chunk number {index}")
-      with open(outputFile, 'a', encoding='utf-8') as file:
-        print(f"Writing chunk number {index} to JSON")
-        chunk.to_json(file, force_ascii=False, orient="records")
+    with open(outputFile, 'w', encoding='utf-8') as file:
+      data.to_json(file, force_ascii=False, orient="records", indent=4)
   except FileNotFoundError:
     print(colored(f"ERROR: File not found for country {flag}, check data subfolders (ECODE: 0004)", "red"))
     sys.exit(1)
