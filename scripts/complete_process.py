@@ -3,7 +3,6 @@
 # Use pandas for data analysis for faster processing
 # The script works in different parts
 # ERROR CODE STARTS WITH 01
-from posixpath import expanduser
 import pandas as pd
 import sys
 import os
@@ -14,6 +13,7 @@ import json
 import requests, zipfile, io
 from geojson import Point, Feature, FeatureCollection, dump
 import sqlalchemy
+import sqlite3
 
 ### ANCHOR VARIABLES ###
 # Cities
@@ -353,14 +353,7 @@ if __name__ == "__main__":
         "featureClass": c["featureClass"],
         "featureCode": c["featureCode"],
         "countryCode": c["countryCode"],
-        "cc2": c["cc2"],
-        "admin1Code": c["admin1Code"],
-        "admin2Code": c["admin2Code"],
-        "admin3Code": c["admin3Code"],
-        "admin4Code": c["admin4Code"],
         "population": c["population"],
-        "elevation": c["elevation"],
-        "dem": c["dem"],
         "timezone": c["timezone"],
         "nameNL": None,
         "nameDE": None,
@@ -385,6 +378,48 @@ if __name__ == "__main__":
       print(colored(f"ERROR: Writing file to JSON for merged country {city['name']} (ECODE: 0120)", "red"))
       sys.exit(1)
 
+
+  # Rank city based on population numbers
+  for index, city in enumerate(citiesZipURLs):
+    file = outputPath + '/' + city["shortcode"] + '.json'
+    
+    # Open city JSON file
+    print(f"Loading JSON from {city['name']} merged JSON file...")
+    cities = []
+    with open(file, encoding='utf-8') as f:
+      try:
+        cities = json.load(f)
+      except Exception as e:
+        print(colored(f"ERROR: Incorrectly formatted JSON for {city['name']} JSON, {e} (ECODE: 0124)", "red"))
+        sys.exit(1)
+    
+    # Rank based on population number
+    for c in cities:
+      population = c["population"]
+      if population == 0:
+        c["ranking"] = 8
+      if population > 0:
+        c["ranking"] = 7
+      if population > 2000:
+        c["ranking"] = 6
+      if population > 10000:
+        c["ranking"] = 5
+      if population > 100000:
+        c["ranking"] = 4
+      if population > 200000:
+        c["ranking"] = 3
+      if population > 400000:
+        c["ranking"] = 2
+      if population > 700000:
+        c["ranking"] = 1
+
+    # Writes the new JSON file
+    try:
+      with open(file, 'w', encoding='utf-8') as f:
+        f.write(json.dumps(cities, indent=4, ensure_ascii=False))
+    except Exception as e:
+      print(colored(f"ERROR: Writing file to JSON for merged country {city['name']} (ECODE: 0125)", "red"))
+      sys.exit(1)
 
   # Create GEOJSON file from JSON files just created
   print(colored(f"Creating GEOJSON files from the merged files!", "blue"))
@@ -421,6 +456,32 @@ if __name__ == "__main__":
       sys.exit(1)
 
 
+  # Create merged JSON file from single merged JSON
+  combinedCities = []
+  combinedCitiesFile = outputPath + '/merged.json'
+  for index, city in enumerate(citiesZipURLs):
+    file = outputPath + '/' + city["shortcode"] + '.json'
+
+    # Open city JSON file
+    print(f"Loading JSON from {city['name']} merged JSON file...")
+    cities = []
+    with open(inputFile, encoding='utf-8') as file:
+      try:
+        cities = json.load(file)
+      except Exception as e:
+        print(colored(f"ERROR: Incorrectly formatted JSON for {city['name']} JSON, {e} (ECODE: 0127)", "red"))
+        sys.exit(1)
+    
+    combinedCities.append(cities)
+
+  # Writes the new combined JSON file (out of the for loop)
+  try:
+    with open(combinedCitiesFile, 'w', encoding='utf-8') as f:
+      f.write(json.dumps(combinedCities, indent=4, ensure_ascii=False))
+  except Exception as e:
+    print(colored(f"ERROR: Writing file to JSON for merged country {city['name']} (ECODE: 0126)", "red"))
+    sys.exit(1)
+
   # Create SQL files
   print(colored(f"Creating SQL files from the merged files!", "blue"))
   for index, city in enumerate(citiesZipURLs):
@@ -442,6 +503,44 @@ if __name__ == "__main__":
     engine = sqlalchemy.create_engine(outputFile)
     cities.to_sql("Cities", engine, if_exists="replace")
 
+
+  # Make combined SQL file
+  print(colored(f"Creating SQL database from combined cities file!", "blue"))
+  # finalDatabaseOutput = 'sqlite:///combinedCities.db' # Did not find a way to save it to output folder
+
+  # Merge GB into NL
+  print("Merging GB into NL...")
+  con3 = sqlite3.connect('NL.db')
+  con3.execute("ATTACH 'GB.db' as dba")
+  con3.execute("BEGIN")
+  for row in con3.execute("SELECT * FROM dba.sqlite_master WHERE type='table'"):
+      combine = "INSERT INTO "+ row[1] + " SELECT * FROM dba." + row[1]
+      con3.execute(combine)
+  con3.commit()
+  con3.execute("detach database dba")
+
+  # Merge DE into NL
+  print("Merging DE into NL...")
+  con3 = sqlite3.connect('NL.db')
+  con3.execute("ATTACH 'DE.db' as dba")
+  con3.execute("BEGIN")
+  for row in con3.execute("SELECT * FROM dba.sqlite_master WHERE type='table'"):
+      combine = "INSERT INTO "+ row[1] + " SELECT * FROM dba." + row[1]
+      con3.execute(combine)
+  con3.commit()
+  con3.execute("detach database dba")
+  con3.close()
+
+  # Change NL name and delete useless DBs
+  print("Deleting temporary files...")
+  os.remove('GB.db')
+  os.remove('DE.db')
+  try:
+    os.remove('../data/endingFiles/AllCities.db')
+  except:
+    pass
+  os.rename('NL.db', '../data/endingFiles/AllCities.db')
+  
   # Exit program correctly
   print(colored("Operation completed without errors!", "green"))
   sys.exit(0)
