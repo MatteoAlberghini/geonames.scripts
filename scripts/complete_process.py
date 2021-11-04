@@ -350,11 +350,9 @@ if __name__ == "__main__":
         "ASCIIName": c["ASCIIName"],
         "latitude": c["latitude"],
         "longitude": c["longitude"],
-        "featureClass": c["featureClass"],
         "featureCode": c["featureCode"],
         "countryCode": c["countryCode"],
         "population": c["population"],
-        "timezone": c["timezone"],
         "nameNL": None,
         "nameDE": None,
         "nameEN": None,
@@ -373,7 +371,7 @@ if __name__ == "__main__":
     os.makedirs(os.path.dirname(outputFile), exist_ok=True)
     try:
       with open(outputFile, 'w', encoding='utf-8') as file:
-        file.write(json.dumps(merged, indent=4, ensure_ascii=False))
+        file.write(json.dumps(merged, indent=4))
     except Exception as e:
       print(colored(f"ERROR: Writing file to JSON for merged country {city['name']} (ECODE: 0120)", "red"))
       sys.exit(1)
@@ -397,12 +395,14 @@ if __name__ == "__main__":
     for c in cities:
       population = c["population"]
       if population == 0:
-        c["ranking"] = 8
+        c["ranking"] = 9
       if population > 0:
-        c["ranking"] = 7
+        c["ranking"] = 8
       if population > 2000:
-        c["ranking"] = 6
+        c["ranking"] = 7
       if population > 10000:
+        c["ranking"] = 6
+      if population > 35000:
         c["ranking"] = 5
       if population > 100000:
         c["ranking"] = 4
