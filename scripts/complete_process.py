@@ -39,6 +39,13 @@ citiesZipURLs = [
     "path": r"../data/startingFiles/cities/unitedKingdom",
     "shortcode": "GB",
   },
+  # Belgium
+  {
+    "name": "Belgium",
+    "url": "http://download.geonames.org/export/dump/BE.zip",
+    "path": r"../data/startingFiles/cities/belgium",
+    "shortcode": "BE",
+  },
 ]
 # Translations
 translationsZipURLs = [
@@ -62,6 +69,13 @@ translationsZipURLs = [
     "url": "http://download.geonames.org/export/dump/alternatenames/GB.zip",
     "path": r"../data/startingFiles/translations/unitedKingdom",
     "shortcode": "GB",
+  },
+  # Belgium
+  {
+    "name": "Belgium",
+    "url": "http://download.geonames.org/export/dump/alternatenames/BE.zip",
+    "path": r"../data/startingFiles/translations/belgium",
+    "shortcode": "BE",
   },
 ]
 # Array containing the names that will be in the cities JSON file
@@ -359,7 +373,7 @@ if __name__ == "__main__":
       }
       for t in translations:
         translationID = t["geonameID"]
-        if translationID == cityID:
+        if translationID == cityID and t["isColloquial"] == None and t["isShortName"] == None and t["isHistoric"] == None:
           iso = str(t["isoLanguage"]).upper()
           endingJSON[f"name{iso}"] = t["alternateName"]
       
@@ -529,17 +543,29 @@ if __name__ == "__main__":
       con3.execute(combine)
   con3.commit()
   con3.execute("detach database dba")
+
+  # Merge be into NL
+  print("Merging BE into NL...")
+  con3 = sqlite3.connect('NL.db')
+  con3.execute("ATTACH 'BE.db' as dba")
+  con3.execute("BEGIN")
+  for row in con3.execute("SELECT * FROM dba.sqlite_master WHERE type='table'"):
+      combine = "INSERT INTO "+ row[1] + " SELECT * FROM dba." + row[1]
+      con3.execute(combine)
+  con3.commit()
+  con3.execute("detach database dba")
   con3.close()
 
   # Change NL name and delete useless DBs
   print("Deleting temporary files...")
   os.remove('GB.db')
   os.remove('DE.db')
+  os.remove('BE.db')
   try:
-    os.remove('../data/endingFiles/AllCities.db')
+    os.remove('../data/endingFiles/all_cities.db')
   except:
     pass
-  os.rename('NL.db', '../data/endingFiles/AllCities.db')
+  os.rename('NL.db', '../data/endingFiles/all_cities.db')
   
   # Exit program correctly
   print(colored("Operation completed without errors!", "green"))
